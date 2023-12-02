@@ -22,20 +22,30 @@ d = {
     'nine': '9',
 }
 
-with open(f'src/inputs/{N:0>2}test.txt', 'r') as f:
+with open(f'src/inputs/{N:0>2}.txt', 'r') as f:
     for line in filter(None, map(str.strip, f.readlines())):
 
         digits = ''.join(filter(lambda c: c.isdigit(), line))
 
-        first = digits[0]
-        last = digits[-1]
-
         lowest_first = -1
-        n = '0'
-        for k in d:
-            if -1 < line.find(lowest_first) < lowest_first:
-                lowest_first = k  
+        highest_last = len(line)
 
+        if digits:
+            first = digits[0]
+            last = digits[-1]
+
+            lowest_first = line.find(first)
+            highest_last = line.rfind(last)
+
+        for k in d:
+            lowest_i = line.find(k)
+            highest_i = line.rfind(k)
+            if -1 < lowest_i < lowest_first:
+                lowest_first = lowest_i
+                first = d[k]
+            if highest_i > highest_last:
+                highest_last = highest_i
+                last = d[k]
 
         plus = int(f'{first}{last}')
         result += plus
