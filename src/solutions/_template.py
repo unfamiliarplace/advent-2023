@@ -1,10 +1,17 @@
 # https://adventofcode.com/2023/day/1
 
+from typing import Iterable
+
 # My naming convention...
 import os
 fname = os.path.basename(__file__).strip('.py')
 N = int(fname[:2])
 S = fname[2]
+
+# Utilities
+
+def stripped_lines(f) -> Iterable:
+    return filter(None, map(str.strip, f.readlines()))
 
 # Logic
 
