@@ -1,5 +1,6 @@
 # https://adventofcode.com/2023/day/1
 
+# Regular imports
 from typing import Iterable
 
 # My naming convention...
@@ -13,10 +14,20 @@ S = fname[2]
 def stripped_lines(f) -> Iterable:
     return filter(None, map(str.strip, f.readlines()))
 
+# Constants
+
+
+
+# Helpers
+
+
+
 # Logic
+
+result = 0
 
 with open(f'src/inputs/{N:0>2}.txt', 'r') as f:
     pass
 
 with open(f'src/outputs/{N:0>2}{S}.txt', 'w') as f:
-    pass
+    f.write(f'{result}')
