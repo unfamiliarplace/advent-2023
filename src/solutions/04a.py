@@ -1,4 +1,4 @@
-# https://adventofcode.com/2023/day/
+# https://adventofcode.com/2023/day/4
 
 # Regular imports
 from typing import Iterable
@@ -27,7 +27,15 @@ def stripped_lines(f) -> Iterable:
 result = 0
 
 with open(f'src/inputs/{N:0>2}.txt', 'r') as f:
-    pass
+    for line in stripped_lines(f):
+        _, line = line.split(':')
+        winning, having = line.split('|')
+        winning = set(int(n) for n in winning.strip().split())
+        having = set(int(n) for n in having.strip().split())
+
+        both = having.intersection(winning)
+        if both:
+            result += 2 ** (len(both) - 1)
 
 with open(f'src/outputs/{N:0>2}{S}.txt', 'w') as f:
     f.write(f'{result}')
