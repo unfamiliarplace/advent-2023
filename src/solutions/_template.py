@@ -9,6 +9,10 @@ fname = os.path.basename(__file__).strip('.py')
 N = int(fname[:2])
 S = fname[2]
 
+TESTING = False
+INPUTS = 'inputs' if not TESTING else 'test_inputs'
+OUTPUTS = 'outputs' if not TESTING else 'test_outputs'
+
 # Utilities
 
 def stripped_lines(f) -> Iterable:
@@ -26,8 +30,8 @@ def stripped_lines(f) -> Iterable:
 
 result = 0
 
-with open(f'src/inputs/{N:0>2}.txt', 'r') as f:
+with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     pass
 
-with open(f'src/outputs/{N:0>2}{S}.txt', 'w') as f:
+with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
     f.write(f'{result}')
