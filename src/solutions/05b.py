@@ -124,8 +124,14 @@ def rules_to_dest_ranges(rules: list[Rule]) -> list[range]:
         ranges.append(range(r.d, r.d_end))
     return ranges
 
-def translate_src_to_dest(src_ranges: list[range], rules: list[Rule]) -> list[range]:
-    pass
+def translate_src_to_dest(possible_src_ranges: list[range], rules: list[Rule]) -> list[range]:
+    possible_dest_ranges = []
+    windows = rules_to_source_ranges(rules)
+
+    for possible in possible_src_ranges:
+        pass
+
+    return possible_dest_ranges
 
 def get_lowest_possible_location_rule() -> tuple[int]:
 
