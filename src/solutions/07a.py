@@ -36,6 +36,10 @@ def is_4oak(hand: str) -> bool:
     s = set(hand)
     return any(hand.count(c) == 4 for c in s)
 
+def is_full(hand: str) -> bool:
+    s = set(hand)
+    return (len(s) == 2) and any(hand.count(c) == 3 for c in s)
+
 def is_3oak(hand: str) -> bool:
     s = set(hand)
     return (len(s) == 3) and any(hand.count(c) == 3 for c in s)
