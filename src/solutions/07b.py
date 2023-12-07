@@ -26,6 +26,15 @@ def stripped_lines(f) -> Iterable[str]:
 
 # Constants
 
+R_5OAK = 7
+R_4OAK = 6
+R_FULL = 5
+R_3OAK = 4
+R_2PAIR = 3
+R_1PAIR = 2
+R_HIGH = 1
+R_NONE = 0
+
 # Helpers
 
 @total_ordering
@@ -96,32 +105,38 @@ class Hand:
     
     def get_type_rank(self: Hand) -> int:
         n_Js = self.cards.count('J')
+        n_diff = len(set(self.cards))
 
         # short-circuiting...
         # 4 or 5 Js means 5 of a kind
         if n_Js > 3:
-            return 7
+            return R_5OAK
         
-        # 3 Js means 
+        # 3 Js: if the other 2 are same, 5oak. Otherwise, 4oak.
+        elif n_Js == 3:
+            if n_diff == 2:
+                return R_5OAK
+            else:
+                return R_4OAK
 
         variants = list(Hand.get_joker_variants(self.cards))
 
         if Hand.jokerize(variants, Hand.is_5oak):
-            return 7
-        elif Hand.jokerize(variants, Hand.is_5oak):
-            return 6
+            return R_5OAK
         elif Hand.jokerize(variants, Hand.is_4oak):
-            return 5
+            return R_4OAK
+        elif Hand.jokerize(variants, Hand.is_full):
+            return R_FULL
         elif Hand.jokerize(variants, Hand.is_3oak):
-            return 4
+            return R_3OAK
         elif Hand.jokerize(variants, Hand.is_2pair):
-            return 3
+            return R_2PAIR
         elif Hand.jokerize(variants, Hand.is_1pair):
-            return 2
+            return R_1PAIR
         elif Hand.jokerize(variants, Hand.is_high):
-            return 1
+            return R_HIGH
         else:
-            return 0
+            return R_NONE
 
     def get_card_rank(self: Hand) -> list[int]:
         return [Hand.STRENGTHS.index(c) for c in self.cards]
