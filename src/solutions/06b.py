@@ -3,9 +3,7 @@
 # Regular imports
 
 from __future__ import annotations
-import math
 from typing import Iterable
-import re
 
 # My naming convention...
 
@@ -27,7 +25,7 @@ def stripped_lines(f) -> Iterable:
 
 # Constants
 
-RE_NUM = r'(\d+)'
+
 
 # Helpers
 
@@ -40,9 +38,6 @@ result = 0
 with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     duration = int(''.join(c for c in f.readline() if c.isdigit()))
     record = int(''.join(c for c in f.readline() if c.isdigit()))
-    print(duration, record)
-
-    n = 0
 
     for ms in range(1, duration):
         remaining = duration - ms
