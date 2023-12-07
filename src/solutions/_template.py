@@ -1,13 +1,17 @@
 # https://adventofcode.com/2023/day/
 
 # Regular imports
+
 from typing import Iterable
 
 # My naming convention...
+
 import os
 fname = os.path.basename(__file__).strip('.py')
 N = int(fname[:2])
 S = fname[2]
+
+# Mode
 
 TESTING = False
 INPUTS = 'inputs' if not TESTING else 'test_inputs'

@@ -4,13 +4,18 @@
 from __future__ import annotations
 from typing import Iterable
 import re
-import math
 
 # My naming convention...
 import os
 fname = os.path.basename(__file__).strip('.py')
 N = int(fname[:2])
 S = fname[2]
+
+# Mode
+
+TESTING = True
+INPUTS = 'inputs' if not TESTING else 'test_inputs'
+OUTPUTS = 'outputs' if not TESTING else 'test_outputs'
 
 # Utilities
 
@@ -35,6 +40,9 @@ class Rule:
         self.d_end = self.d + n
         self.s_end = self.s + n
 
+    def __repr__(self: Rule) -> str:
+        return f'({self.n:>10}) : {self.s}-{self.s_end} -> {self.d}-{self.d_end}'
+
 def get_sorted_rules(rules: list[Rule]) -> list[Rule]:
     rules = sorted(rules, key=lambda r: r.s)
 
@@ -48,7 +56,7 @@ def get_sorted_rules(rules: list[Rule]) -> list[Rule]:
         last_upper = r.s_end
     
     rules.extend(twixts)
-    return sorted(rules, key=lambda r: r.d)
+    return sorted(rules, key=lambda r: r.s)
 
 def parse(f) -> None:
     state = 0
@@ -60,7 +68,7 @@ def parse(f) -> None:
             ranges = (int(m.group(1)) for m in re.finditer(RE_NUM, line))
             i = iter(ranges)
             for (start, stop) in zip(i, i):
-                seed_ranges.append(range(start, stop))
+                seed_ranges.append(range(start, start + stop))
             state = 1
         
         elif state == 1:
@@ -126,22 +134,31 @@ def rules_to_dest_ranges(rules: list[Rule]) -> list[range]:
 
 def translate_src_to_dest(possible_src_ranges: list[range], rules: list[Rule]) -> list[range]:
     possible_dest_ranges = []
-    windows = rules_to_source_ranges(rules)
+    src_windows = rules_to_source_ranges(rules)
+    dest_windows = rules_to_dest_ranges(rules)
 
     for possible in possible_src_ranges:
-        pass
+        for (src, dest) in zip(src_windows, dest_windows):
+            overlap = get_range_overlap(possible, src)
+            if overlap is None:
+                continue
 
-    return possible_dest_ranges
+            offset_start = abs(src.start - overlap.start)
+            offset_stop = abs(overlap.stop - src.stop)
+            translated = range(dest.start + offset_start, dest.stop - offset_stop)
+            possible_dest_ranges.append(translated)
 
-def get_lowest_possible_location_rule() -> tuple[int]:
+    return sorted(possible_dest_ranges, key=lambda r: r.start)
 
-    these = seed_ranges
-    others = rules_to_source_ranges(steps[0])
-    first_round = get_all_overlaps(these, others)
+def get_possible_location_ranges() -> list[tuple[int]]:
+    available = seed_ranges
 
-    print(first_round)
+    for step in steps:
+        windows = rules_to_source_ranges(step)
+        overlaps = get_all_overlaps(available, windows)
+        available = translate_src_to_dest(overlaps, step)
 
-    return 'hi'
+    return available
 
 # Logic
 
@@ -149,10 +166,11 @@ seed_ranges = []
 steps = []
 location = None
 
-with open(f'src/inputs/{N:0>2}.txt', 'r') as f:
+with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     parse(f)
-    location = get_lowest_possible_location_rule()
+    dest_ranges = get_possible_location_ranges()
+    print(dest_ranges)
 
-with open(f'src/outputs/{N:0>2}{S}.txt', 'w') as f:
+with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
     result = 1 # TODO
     f.write(f'{result}')
