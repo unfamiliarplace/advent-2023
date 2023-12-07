@@ -20,7 +20,7 @@ OUTPUTS = 'outputs' if not TESTING else 'test_outputs'
 
 # Utilities
 
-def stripped_lines(f) -> Iterable:
+def stripped_lines(f) -> Iterable[str]:
     return filter(None, map(str.strip, f.readlines()))
 
 # Constants
