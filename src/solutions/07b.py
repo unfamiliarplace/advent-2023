@@ -83,7 +83,30 @@ class Hand:
         return len(set(cards)) == 5
     
     @staticmethod
-    def jokerize(cards: str) -> int|None:
+    def get_joker_variants(cards: str) -> Iterable[str]:
+        nonjokers = ''.join(c for c in cards if (c != 'J'))
+        jokers = ''.join(c for c in cards if (c == 'J'))
+
+        def _mutate(_cards: str) -> str:
+            for s in Hand.STRENGTHS[1:]:    # not J
+                if _cards[1:]:
+                    for _rest in _mutate(_cards[1:]):
+                        yield s + _rest
+                else:
+                    yield s
+        
+        if not jokers:
+            yield cards
+        else:
+            for variant in _mutate(jokers):
+                yield variant + nonjokers
+
+    @staticmethod
+    def jokerize(variants: list[str], checker: callable) -> bool:
+        return any(checker(v) for v in variants)
+
+    @staticmethod
+    def short_circuit(cards: str) -> int|None:
         n_Js = cards.count('J')
         n_diff = len(set(cards))
 
@@ -95,46 +118,27 @@ class Hand:
                 return R_5OAK
             elif n_diff == 3:
                 return R_4OAK
-            
-        elif n_Js == 2:
-            if n_diff == 2:
-                return R_5OAK
-            elif n_diff == 3:
-                return R_4OAK
-            elif n_diff == 4:
-                return R_3OAK
-            
-        elif n_Js == 1:
-            if n_diff == 2:
-                return R_5OAK
-            elif n_diff == 3:
-                return R_4OAK
-            elif n_diff == 4:
-                return R_3OAK
-            elif n_diff == 5:
-                return R_1PAIR
-        
-        else:
-            return None
     
     def get_type_rank(self: Hand) -> int:
-        jokerized = Hand.jokerize(self.cards)
-        if jokerized is not None:
-            return jokerized
+        sc = Hand.short_circuit(self.cards)
+        if sc is not None:
+            return sc
 
-        if Hand.is_5oak(self.cards):
+        variants = list(Hand.get_joker_variants(self.cards))
+
+        if Hand.jokerize(variants, Hand.is_5oak):
             return R_5OAK
-        elif Hand.is_4oak(self.cards):
+        elif Hand.jokerize(variants, Hand.is_4oak):
             return R_4OAK
-        elif Hand.is_full(self.cards):
+        elif Hand.jokerize(variants, Hand.is_full):
             return R_FULL
-        elif Hand.is_3oak(self.cards):
+        elif Hand.jokerize(variants, Hand.is_3oak):
             return R_3OAK
-        elif Hand.is_2pair(self.cards):
+        elif Hand.jokerize(variants, Hand.is_2pair):
             return R_2PAIR
-        elif Hand.is_1pair(self.cards):
+        elif Hand.jokerize(variants, Hand.is_1pair):
             return R_1PAIR
-        elif Hand.is_high(self.cards):
+        elif Hand.jokerize(variants, Hand.is_high):
             return R_HIGH
 
     def get_card_rank(self: Hand) -> list[int]:
@@ -171,11 +175,6 @@ with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     hands.sort()
     
     for (i, hand) in enumerate(hands):
-        # if hand.cards.count('J') == 2:
-        #     print(hand)
-        #     print(hand.get_cmp_factors())
-        #     break
-
         result += (i + 1) * hand.bid
 
 with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
