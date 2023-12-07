@@ -102,7 +102,7 @@ class Hand:
             elif n_diff == 3:
                 return R_4OAK
             elif n_diff == 4:
-                return R_FULL
+                return R_3OAK
             
         elif n_Js == 1:
             if n_diff == 2:
@@ -172,7 +172,9 @@ with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     
     for (i, hand) in enumerate(hands):
         # if hand.cards.count('J') == 2:
-        #     print(hand.get_type_rank())
+        #     print(hand)
+        #     print(hand.get_cmp_factors())
+        #     break
 
         result += (i + 1) * hand.bid
 
