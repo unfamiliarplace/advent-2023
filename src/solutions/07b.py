@@ -57,7 +57,7 @@ class Hand:
     @staticmethod
     def is_4oak(cards: str) -> bool:
         s = set(cards)
-        return any(cards.count(c) == 4 for c in s)
+        return (len(s) == 2) and any(cards.count(c) == 4 for c in s)
 
     @staticmethod
     def is_full(cards: str) -> bool:
@@ -72,71 +72,70 @@ class Hand:
     @staticmethod
     def is_2pair(cards: str) -> bool:
         s = set(cards)
-        return (len(s) == 3) and (sum(cards.count(c) == 2 for c in s) == 2)
+        return (len(s) == 3) and not any(cards.count(c) == 3 for c in s)
 
     @staticmethod
     def is_1pair(cards: str) -> bool:
-        s = set(cards)
-        return (len(s) == 4) and (sum(cards.count(c) > 1 for c in s) == 1)
+        return len(set(cards)) == 4
 
     @staticmethod
     def is_high(cards: str) -> bool:
         return len(set(cards)) == 5
     
     @staticmethod
-    def get_joker_variants(cards: str) -> Iterable[str]:
-        nonjokers = ''.join(c for c in cards if (c != 'J'))
-        jokers = ''.join(c for c in cards if (c == 'J'))
+    def jokerize(cards: str) -> int|None:
+        n_Js = cards.count('J')
+        n_diff = len(set(cards))
 
-        def _mutate(_cards: str) -> str:
-            for s in Hand.STRENGTHS[1:]:    # not J
-                if _cards[1:]:
-                    for _rest in _mutate(_cards[1:]):
-                        yield s + _rest
-                else:
-                    yield s
-        
-        for variant in _mutate(jokers):
-            yield variant + nonjokers
-
-    @staticmethod
-    def jokerize(variants: list[str], checker: callable) -> bool:
-        return any(checker(v) for v in variants)
-    
-    def get_type_rank(self: Hand) -> int:
-        n_Js = self.cards.count('J')
-        n_diff = len(set(self.cards))
-
-        # short-circuiting...
-        # 4 or 5 Js means 5 of a kind
         if n_Js > 3:
             return R_5OAK
         
-        # 3 Js: if the other 2 are same, 5oak. Otherwise, 4oak.
         elif n_Js == 3:
             if n_diff == 2:
                 return R_5OAK
-            else:
+            elif n_diff == 3:
                 return R_4OAK
-
-        variants = list(Hand.get_joker_variants(self.cards))
-
-        if Hand.jokerize(variants, Hand.is_5oak):
-            return R_5OAK
-        elif Hand.jokerize(variants, Hand.is_4oak):
-            return R_4OAK
-        elif Hand.jokerize(variants, Hand.is_full):
-            return R_FULL
-        elif Hand.jokerize(variants, Hand.is_3oak):
-            return R_3OAK
-        elif Hand.jokerize(variants, Hand.is_2pair):
-            return R_2PAIR
-        elif Hand.jokerize(variants, Hand.is_1pair):
-            return R_1PAIR
-        elif Hand.jokerize(variants, Hand.is_high):
-            return R_HIGH
+            
+        elif n_Js == 2:
+            if n_diff == 2:
+                return R_5OAK
+            elif n_diff == 3:
+                return R_4OAK
+            elif n_diff == 4:
+                return R_FULL
+            
+        elif n_Js == 1:
+            if n_diff == 2:
+                return R_5OAK
+            elif n_diff == 3:
+                return R_4OAK
+            elif n_diff == 4:
+                return R_3OAK
+            elif n_diff == 5:
+                return R_1PAIR
+        
         else:
-            return R_NONE
+            return None
+    
+    def get_type_rank(self: Hand) -> int:
+        jokerized = Hand.jokerize(self.cards)
+        if jokerized is not None:
+            return jokerized
+
+        if Hand.is_5oak(self.cards):
+            return R_5OAK
+        elif Hand.is_4oak(self.cards):
+            return R_4OAK
+        elif Hand.is_full(self.cards):
+            return R_FULL
+        elif Hand.is_3oak(self.cards):
+            return R_3OAK
+        elif Hand.is_2pair(self.cards):
+            return R_2PAIR
+        elif Hand.is_1pair(self.cards):
+            return R_1PAIR
+        elif Hand.is_high(self.cards):
+            return R_HIGH
 
     def get_card_rank(self: Hand) -> list[int]:
         return [Hand.STRENGTHS.index(c) for c in self.cards]
