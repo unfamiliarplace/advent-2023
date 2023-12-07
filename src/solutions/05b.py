@@ -4,6 +4,7 @@
 from __future__ import annotations
 from typing import Iterable
 import re
+import sys
 
 # My naming convention...
 import os
@@ -13,7 +14,7 @@ S = fname[2]
 
 # Mode
 
-TESTING = True
+TESTING = False
 INPUTS = 'inputs' if not TESTING else 'test_inputs'
 OUTPUTS = 'outputs' if not TESTING else 'test_outputs'
 
@@ -54,6 +55,8 @@ def get_sorted_rules(rules: list[Rule]) -> list[Rule]:
         if twixt.n > 0:
             twixts.append(twixt)
         last_upper = r.s_end
+
+    twixts.append(Rule(last_upper, last_upper, sys.maxsize))
     
     rules.extend(twixts)
     return sorted(rules, key=lambda r: r.s)
@@ -133,7 +136,7 @@ def rules_to_dest_ranges(rules: list[Rule]) -> list[range]:
     return ranges
 
 def translate_src_to_dest(possible_src_ranges: list[range], rules: list[Rule]) -> list[range]:
-    possible_dest_ranges = []
+    possible_dest_ranges = set()
     src_windows = rules_to_source_ranges(rules)
     dest_windows = rules_to_dest_ranges(rules)
 
@@ -146,11 +149,11 @@ def translate_src_to_dest(possible_src_ranges: list[range], rules: list[Rule]) -
             offset_start = abs(src.start - overlap.start)
             offset_stop = abs(overlap.stop - src.stop)
             translated = range(dest.start + offset_start, dest.stop - offset_stop)
-            possible_dest_ranges.append(translated)
+            possible_dest_ranges.add(translated)
 
     return sorted(possible_dest_ranges, key=lambda r: r.start)
 
-def get_possible_location_ranges() -> list[tuple[int]]:
+def get_possible_location_ranges() -> list[range]:
     available = seed_ranges
 
     for step in steps:
@@ -164,13 +167,12 @@ def get_possible_location_ranges() -> list[tuple[int]]:
 
 seed_ranges = []
 steps = []
-location = None
+result = None
 
 with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     parse(f)
     dest_ranges = get_possible_location_ranges()
-    print(dest_ranges)
+    result = dest_ranges[0].start
 
 with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
-    result = 1 # TODO
     f.write(f'{result}')
