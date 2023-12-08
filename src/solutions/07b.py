@@ -89,7 +89,7 @@ class Hand:
         nonjokers = ''.join(c for c in cards if (c != 'J'))
         jokers = ''.join(c for c in cards if (c == 'J'))
 
-        def _mutate(_cards: str) -> str:
+        def _mutate(_cards: str) -> Iterable[str]:
             for s in Hand.STRENGTHS[1:]:    # not J
                 if _cards[1:]:
                     for _rest in _mutate(_cards[1:]):
