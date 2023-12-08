@@ -45,10 +45,12 @@ class Hand:
     STRENGTHS: str = 'AKQT98765432J'[::-1]
     cards: str
     bid: int
+    cmp: tuple(int, list[int])
 
     def __init__(self: Hand, cards: str, bid: int) -> None:
         self.cards = cards
         self.bid = bid
+        self.cmp = self.get_cmp_factors()
 
     @staticmethod
     def is_5oak(cards: str) -> bool:
@@ -151,13 +153,13 @@ class Hand:
         if not isinstance(other, Hand):
             return False
         
-        return self.get_cmp_factors() == other.get_cmp_factors()
+        return self.cmp == other.cmp
     
     def __lt__(self: Hand, other: Hand) -> bool:
         if not isinstance(other, Hand):
             raise TypeError(f"Cannot compare types: Hand and {type(other)}")
         
-        return self.get_cmp_factors() < other.get_cmp_factors()
+        return self.cmp < other.cmp
     
     def __repr__(self: Hand) -> str:
         return self.cards
