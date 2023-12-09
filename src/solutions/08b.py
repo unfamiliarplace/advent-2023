@@ -45,31 +45,27 @@ def parse_rules(lines: Iterable[str]) -> None:
         r = Rule(*re.match(RE_RULE, line).groups())
         rules[r.key] = r
 
-def next_keys(keys: Iterable[str], i: int) -> Iterable[str]:
+def next_keys(keys: Iterable[str], i: int) -> list[str]:
+    result = []
     if instructions[i % len(instructions)] == 'L':
         for key in keys:
-            yield rules[key].left
+            result.append(rules[key].left)
     else:
         for key in keys:
-            yield rules[key].right
+            result.append(rules[key].right)
+    return result
 
-def get_start_keys() -> Iterable[str]:
-    for key in rules:
-        if key[2] == START:
-            yield key
+def get_start_keys() -> list[str]:
+    return list(filter(lambda k: k[2] == START, rules.keys()))
 
-def n_stop_keys(keys: Iterable[str]) -> int:
-    n = 0
-    for key in keys:
-        n += key[2] == STOP
-    return n
+def all_stop_keys(keys: Iterable[str]) -> int:
+    return all(key[2] == STOP for key in keys)
             
 def follow_sequence() -> int:
     i = 0
-    keys = list(get_start_keys())
-    n_keys = len(keys)
-    while n_stop_keys(keys) != n_keys:
-        keys = list(next_keys(keys, i))
+    keys = get_start_keys()
+    while not all_stop_keys(keys):
+        keys = next_keys(keys, i)
         i += 1
     return i
 
