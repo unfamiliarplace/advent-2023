@@ -15,7 +15,7 @@ S = fname[2]
 
 # Mode
 
-TESTING = True
+TESTING = False
 INPUTS = 'inputs' if not TESTING else 'test_inputs'
 OUTPUTS = 'outputs' if not TESTING else 'test_outputs'
 
@@ -35,7 +35,7 @@ def predict_next_in_sequence(sequence: list[int]) -> int:
     diffs = sequence
 
     while set(diffs) != {0}:
-        to_come += diffs[0]
+        to_come += diffs[-1]
         diffs = list(numpy.diff(diffs))
 
     return to_come
@@ -47,7 +47,7 @@ result = 0
 with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     for line in stripped_lines(f):
         sequence = list(int(n) for n in line.split())
-        result += predict_next_in_sequence(sequence)
+        result += predict_next_in_sequence(sequence[::-1])
 
 with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
     f.write(f'{result}')
