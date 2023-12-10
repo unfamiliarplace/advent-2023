@@ -5,8 +5,6 @@
 from __future__ import annotations
 from typing import Iterable
 from termcolor import cprint
-import uuid
-import traceback
 
 # My naming convention...
 
@@ -49,30 +47,25 @@ DIRECTION_TO_SYMBOLS = {
 # Helpers
 
 class Space:
-    uuid: str
     symbol: str
     x: int
     y: int
-    orig_x: int
-    orig_y: int
     exits: set[Space]
     in_loop: bool
     searched_path_to_exit: bool
     has_path_to_exit: bool
     expanded_only: bool
 
-    def __init__(self: Space, symbol: str, x: int, y: int) -> None:
-        self.uuid = str(uuid.uuid4())
+    def __init__(self: Space, symbol: str, x: int, y: int, expanded_only: bool=False) -> None:
 
         self.symbol = symbol
         self.x, self.y = x, y
-        self.orig_x, self.orig_y = x, y
         self.exits = set()
 
         self.in_loop = self.symbol == 'S'
         self.searched_path_to_exit = False
         self.has_path_to_exit = False
-        self.expanded_only = False
+        self.expanded_only = expanded_only
 
     def add_exits(self: Space) -> None:
         possibles = SYMBOL_TO_DIRECTIONS[self.symbol]
@@ -158,7 +151,7 @@ class Space:
         return self in other.exits
     
     def __hash__(self: Space) -> int:
-        return hash(self.uuid)
+        return hash((self.expanded_only, self.x, self.y))
             
     def __eq__ (self: Space, other: object) -> bool:
         if not isinstance(other, Space):
@@ -173,7 +166,7 @@ def expand_grid() -> list[list[Space]]:
 
     def _create_link(prev: Space, curr: Space, connector: str) -> Space:
         if prev.connected(curr):
-            insert = Space(connector, i_col, i_row)
+            insert = Space(connector, i_col, i_row, True)
 
             if prev.in_loop and curr.in_loop:
                 insert.add_to_loop()
@@ -186,9 +179,8 @@ def expand_grid() -> list[list[Space]]:
             insert.exits.add(curr)
 
         else:
-            insert = Space('.', i_col, i_row)
+            insert = Space('.', i_col, i_row, True)
         
-        insert.expanded_only = True
         return insert
 
     # Expand horizontally
