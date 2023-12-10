@@ -14,7 +14,7 @@ S = fname[2]
 
 # Mode
 
-TESTING = True
+TESTING = False
 INPUTS = 'inputs' if not TESTING else 'test_inputs'
 OUTPUTS = 'outputs' if not TESTING else 'test_outputs'
 
@@ -53,6 +53,7 @@ class Space:
     in_loop: bool
     searched_path_to_exit: bool
     has_path_to_exit: bool
+    expanded_only: bool
 
     def __init__(self: Space, symbol: str, x: int, y: int) -> None:
         self.symbol = symbol
@@ -62,6 +63,7 @@ class Space:
         self.in_loop = self.symbol == 'S'
         self.searched_path_to_exit = False
         self.has_path_to_exit = False
+        self.expanded_only = False
 
     def add_exits(self: Space) -> None:
         possibles = SYMBOL_TO_DIRECTIONS[self.symbol]
@@ -101,7 +103,7 @@ class Space:
     def add_to_loop(self: Space) -> None:
         self.in_loop = True
 
-    def search_path_to_exit(self: Space, checked: set[Space]=set()) -> bool:
+    def search_path_to_exit(self: Space, exclude_from_surrounding: set[Space]=set()) -> bool:
         def _finish(value: bool) -> bool:
             self.searched_path_to_exit = True
             self.has_path_to_exit = value
@@ -121,23 +123,16 @@ class Space:
             return _finish(True)
 
         # Otherwise check surrounding
-        checked.add(self)
-        for cell in self.surrounding().difference(checked):
-            if cell.search_path_to_exit(checked):
+        exclude_from_surrounding = exclude_from_surrounding.union({self})
+        for cell in self.surrounding().difference(exclude_from_surrounding):
+            if cell.search_path_to_exit(exclude_from_surrounding):
                 return _finish(True)
         
         # No way out
         return _finish(False)
 
     def is_enclosed_in_main_loop(self: Space) -> bool:
-
-        if self.in_loop:
-            return False
-        
-        if self.search_path_to_exit():
-            return False
-        
-        return True
+        return not (self.in_loop or self.expanded_only or self.search_path_to_exit())
     
     def connected(self: Space, other: Space) -> bool:
         return self in other.exits
@@ -159,6 +154,7 @@ def expand_grid() -> list[list[Space]]:
     def _create_link(prev: Space, curr: Space, connector: str) -> Space:
         if prev.connected(curr):
             insert = Space(connector, i_col, i_row)
+
             if prev.in_loop and curr.in_loop:
                 insert.add_to_loop()
 
@@ -172,6 +168,7 @@ def expand_grid() -> list[list[Space]]:
         else:
             insert = Space('.', i_col, i_row)
         
+        insert.expanded_only = True
         return insert
 
     # Expand horizontally
@@ -252,25 +249,9 @@ with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     
     start.exits = start_exits
     traverse_loop(start) # Required to update in_loop
+
     expand_grid()
-
-    result = count_enclosed()    
-
-    # for line in grid:
-    #     print(''.join((str(c) for c in line)))
-    # print()
-
-    # for line in expand_grid():
-    #     print(''.join((str(c) for c in line)))
-
-    # for line in grid:
-    #     for cell in line:
-    #         if cell.search_path_to_exit():
-    #             print('T', end='')
-    #         else:
-    #             print(cell, end='')
-    #     print()
-        
+    result = count_enclosed()
 
 with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
     f.write(f'{result}')
