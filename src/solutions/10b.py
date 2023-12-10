@@ -50,6 +50,8 @@ class Space:
     symbol: str
     x: int
     y: int
+    orig_x: int
+    orig_y: int
     exits: set[Space]
     in_loop: bool
     searched_path_to_exit: bool
@@ -59,6 +61,7 @@ class Space:
     def __init__(self: Space, symbol: str, x: int, y: int) -> None:
         self.symbol = symbol
         self.x, self.y = x, y
+        self.orig_x, self.orig_y = x, y
         self.exits = set()
 
         self.in_loop = self.symbol == 'S'
@@ -125,21 +128,30 @@ class Space:
 
         # Otherwise check surrounding
         exclude_from_surrounding = exclude_from_surrounding.union({self})
-        for cell in self.surrounding().difference(exclude_from_surrounding):
-            if cell.search_path_to_exit(exclude_from_surrounding):
+        for adjacent in self.surrounding().difference(exclude_from_surrounding):
+            if adjacent.search_path_to_exit(exclude_from_surrounding):
                 return _finish(True)
-        
+                    
         # No way out
         return _finish(False)
 
     def is_enclosed_in_main_loop(self: Space) -> bool:
-        return not (self.in_loop or self.expanded_only or self.search_path_to_exit())
+        if self.in_loop:
+            return False
+        
+        if self.expanded_only:
+            return False
+
+        if self.search_path_to_exit():
+            return False
+        
+        return True
     
     def connected(self: Space, other: Space) -> bool:
         return self in other.exits
     
     def __hash__(self: Space) -> int:
-        return hash((self.x, self.y))
+        return hash((self.orig_x, self.orig_y))
             
     def __eq__ (self: Space, other: object) -> bool:
         if not isinstance(other, Space):
@@ -234,10 +246,10 @@ def print_enclosure(old_grid: list[list[Space]]) -> None:
                 cprint(' ', 'red', 'on_red', end='')
             elif cell.in_loop:
                 cprint(cell, 'dark_grey', end='')
-            elif cell.expanded_only:
-                print(' ', end='')
             elif cell.search_path_to_exit():
                 cprint(' ', 'green', 'on_green', end='')
+            elif cell.expanded_only:
+                cprint(' ', 'dark_grey', 'on_dark_grey', end='')
         print()
 
 # Logic
