@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 from typing import Iterable
+from termcolor import colored, cprint
 
 # My naming convention...
 
@@ -14,7 +15,7 @@ S = fname[2]
 
 # Mode
 
-TESTING = False
+TESTING = True
 INPUTS = 'inputs' if not TESTING else 'test_inputs'
 OUTPUTS = 'outputs' if not TESTING else 'test_outputs'
 
@@ -225,6 +226,20 @@ def count_enclosed() -> int:
             n += space.is_enclosed_in_main_loop()
     return n
 
+def print_enclosure(old_grid: list[list[Space]]) -> None:
+
+    for line in old_grid:
+        for cell in line:
+            if cell.is_enclosed_in_main_loop():
+                cprint(' ', 'red', 'on_red', end='')
+            elif cell.in_loop:
+                cprint(cell, 'dark_grey', end='')
+            elif cell.expanded_only:
+                print(' ', end='')
+            elif cell.search_path_to_exit():
+                cprint(' ', 'green', 'on_green', end='')
+        print()
+
 # Logic
 
 result = 0
@@ -249,9 +264,15 @@ with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     
     start.exits = start_exits
     traverse_loop(start) # Required to update in_loop
-
+    old_grid = list(row[:] for row in grid)
     expand_grid()
-    result = count_enclosed()
 
+    result = count_enclosed()
+    print(result)
+
+    print_enclosure(old_grid)
+    print()
+    print_enclosure(grid)
+    
 with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
     f.write(f'{result}')
