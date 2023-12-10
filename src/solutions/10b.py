@@ -4,7 +4,9 @@
 
 from __future__ import annotations
 from typing import Iterable
-from termcolor import colored, cprint
+from termcolor import cprint
+import uuid
+import traceback
 
 # My naming convention...
 
@@ -15,7 +17,7 @@ S = fname[2]
 
 # Mode
 
-TESTING = True
+TESTING = False
 INPUTS = 'inputs' if not TESTING else 'test_inputs'
 OUTPUTS = 'outputs' if not TESTING else 'test_outputs'
 
@@ -47,6 +49,7 @@ DIRECTION_TO_SYMBOLS = {
 # Helpers
 
 class Space:
+    uuid: str
     symbol: str
     x: int
     y: int
@@ -59,6 +62,8 @@ class Space:
     expanded_only: bool
 
     def __init__(self: Space, symbol: str, x: int, y: int) -> None:
+        self.uuid = str(uuid.uuid4())
+
         self.symbol = symbol
         self.x, self.y = x, y
         self.orig_x, self.orig_y = x, y
@@ -90,15 +95,6 @@ class Space:
         if (-1 < nx < len(grid[0])) and (-1 < ny < len(grid)):
             return grid[ny][nx]
 
-    def surrounding(self: Space) -> set[Space]:
-        surr = set()
-        for (dx, dy) in ((-1, 0), (0, -1), (1, 0), (0, 1)):
-            other = self.space_from(dx, dy)
-            if other is not None:
-                surr.add(other)
-        
-        return surr
-
     def next_space(self: Space, prev: Space) -> Space:
         for space in self.exits:
             if space != prev:
@@ -107,33 +103,44 @@ class Space:
     def add_to_loop(self: Space) -> None:
         self.in_loop = True
 
-    def search_path_to_exit(self: Space, exclude_from_surrounding: set[Space]=set()) -> bool:
-        def _finish(value: bool) -> bool:
-            self.searched_path_to_exit = True
-            self.has_path_to_exit = value
-            return value
-            
-        # Already searched? (Save time)
-        if self.searched_path_to_exit:
-            return self.has_path_to_exit
+    def surrounding(self: Space, exclusions: set[Space]=set()) -> set[Space]:
+        surr = set()
+        for (dx, dy) in ((-1, 0), (0, -1), (1, 0), (0, 1)):
+            other = self.space_from(dx, dy)
+            if (other is not None) and (other not in exclusions):
+                surr.add(other)
         
-        # Loops can't exit
+        return surr
+
+    def search_path_to_exit(self: Space, exclusions: set[Space]=set()) -> bool:
+        if not self.searched_path_to_exit:
+            self.has_path_to_exit = self._search_path_to_exit(exclusions)
+            self.searched_path_to_exit = True
+        
+        return self.has_path_to_exit
+
+    def _search_path_to_exit(self: Space, exclusions: set[Space]=set()) -> bool:
+        
+        # Loop can't be an exit
         if self.in_loop:
-            return _finish(False)
+            return False
             
         # If not surrounded by 4 cardinals, we're on an edge
-        surr = self.surrounding()
-        if len(surr) < 4:
-            return _finish(True)
+        if (0 in (self.x, self.y)) or ((len(grid) - 1) in (self.x, self.y)):
+            return True
+        
+        # Can our surrounding ones lead to exits?
+        exclusions = exclusions.union({self})
 
-        # Otherwise check surrounding
-        exclude_from_surrounding = exclude_from_surrounding.union({self})
-        for adjacent in self.surrounding().difference(exclude_from_surrounding):
-            if adjacent.search_path_to_exit(exclude_from_surrounding):
-                return _finish(True)
+        # if any([adjacent.search_path_to_exit(exclusions) for adjacent in self.surrounding(exclusions)]):
+        #     return True
+        
+        for adjacent in self.surrounding(exclusions):
+            if adjacent.search_path_to_exit(exclusions):
+                return True
                     
         # No way out
-        return _finish(False)
+        return False
 
     def is_enclosed_in_main_loop(self: Space) -> bool:
         if self.in_loop:
@@ -151,7 +158,7 @@ class Space:
         return self in other.exits
     
     def __hash__(self: Space) -> int:
-        return hash((self.orig_x, self.orig_y))
+        return hash(self.uuid)
             
     def __eq__ (self: Space, other: object) -> bool:
         if not isinstance(other, Space):
@@ -233,14 +240,20 @@ def traverse_loop(start: Space) -> int:
 
 def count_enclosed() -> int:
     n = 0
+    rows = 0
     for row in grid:
         for space in row:
             n += space.is_enclosed_in_main_loop()
+        
+        rows += 1
+        if rows > 2:
+            break
     return n
 
-def print_enclosure(old_grid: list[list[Space]]) -> None:
+def print_enclosure(_grid: list[list[Space]]) -> None:
+    rows = 0
 
-    for line in old_grid:
+    for line in _grid:
         for cell in line:
             if cell.is_enclosed_in_main_loop():
                 cprint(' ', 'red', 'on_red', end='')
@@ -252,12 +265,15 @@ def print_enclosure(old_grid: list[list[Space]]) -> None:
                 cprint(' ', 'dark_grey', 'on_dark_grey', end='')
         print()
 
+        rows += 1
+        if rows > 2:
+            break
+
 # Logic
 
 result = 0
 grid: list[list[Space]] = []
 start_exits: set[Space] = set()
-start = None
 
 with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     for (y, line) in enumerate(stripped_lines(f)):
