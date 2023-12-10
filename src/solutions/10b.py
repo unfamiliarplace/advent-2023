@@ -14,7 +14,7 @@ S = fname[2]
 
 # Mode
 
-TESTING = False
+TESTING = True
 INPUTS = 'inputs' if not TESTING else 'test_inputs'
 OUTPUTS = 'outputs' if not TESTING else 'test_outputs'
 
@@ -49,7 +49,7 @@ class Space:
     symbol: str
     x: int
     y: int
-    exits: list[Space]
+    exits: set[Space]
     in_loop: bool
     searched_path_to_exit: bool
     has_path_to_exit: bool
@@ -57,7 +57,7 @@ class Space:
     def __init__(self: Space, symbol: str, x: int, y: int) -> None:
         self.symbol = symbol
         self.x, self.y = x, y
-        self.exits = []
+        self.exits = set()
 
         self.in_loop = self.symbol == 'S'
         self.searched_path_to_exit = False
@@ -74,10 +74,10 @@ class Space:
             other = self.space_from(dx, dy)
             if other:
                 if other.symbol in DIRECTION_TO_SYMBOLS[(dx, dy)]:
-                    self.exits.append(other)
+                    self.exits.add(other)
 
                     if other.symbol == 'S':
-                        start_exits.append(self)
+                        start_exits.add(self)
 
     def space_from(self: Space, dx: int, dy: int) -> Space|None:
         nx, ny = self.x + dx, self.y + dy
@@ -129,13 +129,18 @@ class Space:
         # No way out
         return _finish(False)
 
-    def is_enclosed(self: Space) -> bool:
-        """TODO"""
-        return all((
-            not self.in_loop,
-            not self.has_path_to_exit(),
-            
-        ))
+    def is_enclosed_in_main_loop(self: Space) -> bool:
+
+        if self.in_loop:
+            return False
+        
+        if self.search_path_to_exit():
+            return False
+        
+        return True
+    
+    def connected(self: Space, other: Space) -> bool:
+        return self in other.exits
     
     def __hash__(self: Space) -> int:
         return hash((self.x, self.y))
@@ -149,10 +154,63 @@ class Space:
     def __repr__(self: Space) -> str:
         return self.symbol
 
+def expand_grid() -> list[list[Space]]:
+
+    def _create_link(prev: Space, curr: Space, connector: str) -> Space:
+        if prev.connected(curr):
+            insert = Space(connector, i_col, i_row)
+            if prev.in_loop and curr.in_loop:
+                insert.add_to_loop()
+
+            prev.exits.remove(curr)
+            curr.exits.remove(prev)
+            prev.exits.add(insert)
+            curr.exits.add(insert)
+            insert.exits.add(prev)
+            insert.exits.add(curr)
+
+        else:
+            insert = Space('.', i_col, i_row)
+        
+        return insert
+
+    # Expand horizontally
+    expanded = []
+    for (i_row, row) in enumerate(grid):
+        expanded_row = []
+
+        for (i_col, space) in enumerate(row[1:]):  
+            prev, curr = row[i_col], space
+            expanded_row.append(prev)
+            expanded_row.append(_create_link(prev, curr, '-'))
+
+        expanded_row.append(curr)
+        expanded.append(expanded_row)
+
+    # Expand vertically
+    expanded2 = [expanded[0]]
+    for (i_row, row) in enumerate(expanded[1:]):
+        brand_new_row = []
+
+        for (i_col, space) in enumerate(row):  
+            prev, curr = expanded[i_row][i_col], space
+            brand_new_row.append(_create_link(prev, curr, '|'))
+        
+        expanded2.append(brand_new_row)
+        expanded2.append(row)
+    
+    # ... Update all x, y :')
+    for y in range(len(expanded2)):
+        for x in range(len(expanded2[0])):
+            s = expanded2[y][x]
+            s.x, s.y = x, y
+
+    grid[:] = expanded2
+
 def traverse_loop(start: Space) -> int:
     """Returns the length of the loop, with S counted twice."""
     prev = start
-    curr = start.exits[0]
+    curr = list(start.exits)[0] # Arbitrary
     n = 1
     while curr != start:
         curr.add_to_loop()
@@ -163,11 +221,18 @@ def traverse_loop(start: Space) -> int:
     
     return n
 
+def count_enclosed() -> int:
+    n = 0
+    for row in grid:
+        for space in row:
+            n += space.is_enclosed_in_main_loop()
+    return n
+
 # Logic
 
 result = 0
-grid: list[Space] = []
-start_exits: list[Space] = []
+grid: list[list[Space]] = []
+start_exits: set[Space] = set()
 start = None
 
 with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
@@ -186,8 +251,17 @@ with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
                 space.add_exits()
     
     start.exits = start_exits
+    traverse_loop(start) # Required to update in_loop
+    expand_grid()
 
-    result = traverse_loop(start) // 2
+    result = count_enclosed()    
+
+    # for line in grid:
+    #     print(''.join((str(c) for c in line)))
+    # print()
+
+    # for line in expand_grid():
+    #     print(''.join((str(c) for c in line)))
 
     # for line in grid:
     #     for cell in line:
