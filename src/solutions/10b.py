@@ -5,7 +5,6 @@
 from __future__ import annotations
 from typing import Iterable
 from termcolor import cprint
-import sys
 
 # My naming convention...
 
@@ -133,10 +132,10 @@ class Space:
             self.y == (len(app.grid) - 1)
         ))
     
-    def search_path_to_exit(self: Space) -> bool:
+    def search_path_to_exit(self: Space, heading: tuple[int]=None) -> bool:
         if not self.searched_path_to_exit:
 
-            self.has_path_to_exit = self._search_path_to_exit()
+            self.has_path_to_exit = self._search_path_to_exit(heading)
             self.searched_path_to_exit = True
 
             if self.has_path_to_exit:
@@ -152,7 +151,7 @@ class Space:
         
         return self.has_path_to_exit
     
-    def _search_path_to_exit(self: Space) -> bool:
+    def _search_path_to_exit(self: Space, heading: tuple[int]=None) -> bool:
         
         # Loop can't be an exit
         if self.in_loop:
@@ -169,10 +168,11 @@ class Space:
         if eligible.intersection(app.known_edges):
             return True
         
+        eligible = sorted(eligible, key=lambda s: (s.x - self.x, s.y - self.y) != heading)
+        
         for adj in eligible:
-            if adj.searched_path_to_exit and adj.has_path_to_exit:
-                return True
-            elif adj.search_path_to_exit():
+            new_heading = (adj.x - self.x, adj.y - self.y)
+            if adj.search_path_to_exit(new_heading):
                 return True
                     
         # No way out
@@ -319,7 +319,6 @@ app = App()
 result = 0
 start_exits: set[Space] = set()
 start: Space
-sys.setrecursionlimit(10_000)
 
 with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     for (y, line) in enumerate(stripped_lines(f)):
