@@ -168,7 +168,7 @@ class Space:
         if eligible.intersection(app.known_edges):
             return True
         
-        eligible = sorted(eligible, key=lambda s: (s.x - self.x, s.y - self.y) != heading)
+        eligible = sorted(eligible, key=lambda s: (s.x - self.x, s.y - self.y) == heading, reverse=True)
         
         for adj in eligible:
             new_heading = (adj.x - self.x, adj.y - self.y)
