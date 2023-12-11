@@ -15,7 +15,7 @@ S = fname[2]
 
 # Mode
 
-TESTING = False
+TESTING = True
 INPUTS = 'inputs' if not TESTING else 'test_inputs'
 OUTPUTS = 'outputs' if not TESTING else 'test_outputs'
 
@@ -32,9 +32,7 @@ SYMBOL_TO_DIRECTIONS = {
     'L' : ((0, -1), (1, 0)),
     'J' : ((0, -1), (-1, 0)),
     '7' : ((0, 1), (-1, 0)),
-    'F' : ((0, 1), (1, 0)),
-    '.' : None,
-    'S' : None,
+    'F' : ((0, 1), (1, 0))
 }
 
 DIRECTION_TO_SYMBOLS = {
@@ -46,31 +44,48 @@ DIRECTION_TO_SYMBOLS = {
 
 # Helpers
 
+class App:
+    grid: list[list[Space]]
+    original_grid: list[list[Space]]
+
+    def __init__(self: App) -> None:
+        self.grid = []
+        self.original_grid = []
+
 class Space:
+    next_id: int=0
+    id: int
     symbol: str
     x: int
     y: int
     exits: set[Space]
     in_loop: bool
+    expanded_only: bool
     searched_path_to_exit: bool
     has_path_to_exit: bool
-    expanded_only: bool
+    checked_enclosure: bool
+    is_enclosed: bool
 
-    def __init__(self: Space, symbol: str, x: int, y: int, expanded_only: bool=False) -> None:
+    def __init__(self: Space, symbol: str, x: int, y: int) -> None:
+        self.id = Space.next_id
+        Space.next_id += 1
 
         self.symbol = symbol
         self.x, self.y = x, y
         self.exits = set()
 
-        self.in_loop = self.symbol == 'S'
+        self.in_loop = False
+        self.expanded_only = False
+
         self.searched_path_to_exit = False
         self.has_path_to_exit = False
-        self.expanded_only = expanded_only
+
+        self.checked_enclosure = False
+        self.is_enclosed = False
 
     def add_exits(self: Space) -> None:
-        possibles = SYMBOL_TO_DIRECTIONS[self.symbol]
+        possibles = SYMBOL_TO_DIRECTIONS.get(self.symbol)
 
-        # TODO
         if possibles is None:
             return
         
@@ -85,33 +100,48 @@ class Space:
 
     def space_from(self: Space, dx: int, dy: int) -> Space|None:
         nx, ny = self.x + dx, self.y + dy
-        if (-1 < nx < len(grid[0])) and (-1 < ny < len(grid)):
-            return grid[ny][nx]
+        if (-1 < nx < len(app.grid[0])) and (-1 < ny < len(app.grid)):
+            return app.grid[ny][nx]
 
     def next_space(self: Space, prev: Space) -> Space:
         for space in self.exits:
             if space != prev:
                 return space
-            
-    def add_to_loop(self: Space) -> None:
-        self.in_loop = True
 
     def surrounding(self: Space, exclusions: set[Space]=set()) -> set[Space]:
         surr = set()
         for (dx, dy) in ((-1, 0), (0, -1), (1, 0), (0, 1)):
             other = self.space_from(dx, dy)
+            pass # print(f'        considering surrounding:{repr(other)} ({other.y}, {other.x})')
+
             if (other is not None) and (other not in exclusions):
                 surr.add(other)
+            elif other in exclusions:
+                print('         ineligible')
         
         return surr
+    
+    def on_edge(self: Space) -> bool:
+        return any((
+            self.x == 0,
+            self.y == 0,
+            self.x == (len(app.grid[0]) - 1),
+            self.y == (len(app.grid) - 1)
+        ))
 
     def search_path_to_exit(self: Space, exclusions: set[Space]=set()) -> bool:
+        pass # print(f'\n    searching for exit from {repr(self)}')
         if not self.searched_path_to_exit:
             self.has_path_to_exit = self._search_path_to_exit(exclusions)
             self.searched_path_to_exit = True
         
+        if self.has_path_to_exit:            
+            pass # print(f'                    {self.id} has path to exit')
+        else:
+            
+            pass # print(f'                    {self.id} has no path to exit')
         return self.has_path_to_exit
-
+    
     def _search_path_to_exit(self: Space, exclusions: set[Space]=set()) -> bool:
         
         # Loop can't be an exit
@@ -119,73 +149,100 @@ class Space:
             return False
             
         # If not surrounded by 4 cardinals, we're on an edge
-        if (0 in (self.x, self.y)) or ((len(grid) - 1) in (self.x, self.y)):
+        if self.on_edge():
             return True
         
         # Can our surrounding ones lead to exits?
         exclusions = exclusions.union({self})
 
-        # if any([adjacent.search_path_to_exit(exclusions) for adjacent in self.surrounding(exclusions)]):
+        # if any(adjacent.search_path_to_exit(exclusions) for adjacent in self.surrounding(exclusions)):
         #     return True
         
-        for adjacent in self.surrounding(exclusions):
+        eligible = self.surrounding(exclusions)
+        for adjacent in eligible:
             if adjacent.search_path_to_exit(exclusions):
+                pass # print(f'        {adjacent.id} is good')
                 return True
                     
         # No way out
         return False
-
+    
     def is_enclosed_in_main_loop(self: Space) -> bool:
-        if self.in_loop:
+        if not self.checked_enclosure:
+            self.is_enclosed = self._is_enclosed_in_main_loop()
+            self.checked_enclosure = True
+        
+        if self.is_enclosed:
+            pass # print(f'      {self.id} is enclosed!!')
+        return self.is_enclosed
+
+    def _is_enclosed_in_main_loop(self: Space) -> bool:
+        if self.expanded_only:
             return False
         
-        if self.expanded_only:
+        pass # print(f'checking enclosure for {repr(self)}', end='... ')
+        if self.in_loop:
+            print('in loop')
+            return False
+        
+        if self.on_edge():
+            print('on edge')
             return False
 
         if self.search_path_to_exit():
             return False
         
+        print('enclosed')
         return True
     
     def connected(self: Space, other: Space) -> bool:
         return self in other.exits
     
     def __hash__(self: Space) -> int:
-        return hash((self.expanded_only, self.x, self.y))
+        return hash(self.id)
             
     def __eq__ (self: Space, other: object) -> bool:
         if not isinstance(other, Space):
             return False
         
-        return (self.x, self.y) == (other.x, other.y)
+        return self.id == other.id
+    
+    def __str__(self: Space) -> str:
+        return self.symbol
     
     def __repr__(self: Space) -> str:
-        return self.symbol
+        s = f'{self.id:>3}: {self.symbol} ([{self.y}][{self.x}])'
+        if self.expanded_only:
+            s += ' [e]'
+        else:
+            s += '    '
+        return s
 
 def expand_grid() -> list[list[Space]]:
 
     def _create_link(prev: Space, curr: Space, connector: str) -> Space:
         if prev.connected(curr):
-            insert = Space(connector, i_col, i_row, True)
-
-            if prev.in_loop and curr.in_loop:
-                insert.add_to_loop()
+            insert = Space(connector, i_col, i_row)
+            insert.in_loop = prev.in_loop
 
             prev.exits.remove(curr)
             curr.exits.remove(prev)
+
             prev.exits.add(insert)
             curr.exits.add(insert)
+
             insert.exits.add(prev)
             insert.exits.add(curr)
 
         else:
-            insert = Space('.', i_col, i_row, True)
+            insert = Space('.', i_col, i_row)
         
+        insert.expanded_only = True
         return insert
 
     # Expand horizontally
     expanded = []
-    for (i_row, row) in enumerate(grid):
+    for (i_row, row) in enumerate(app.grid):
         expanded_row = []
 
         for (i_col, space) in enumerate(row[1:]):  
@@ -214,7 +271,7 @@ def expand_grid() -> list[list[Space]]:
             s = expanded2[y][x]
             s.x, s.y = x, y
 
-    grid[:] = expanded2
+    return expanded2
 
 def traverse_loop(start: Space) -> int:
     """Returns the length of the loop, with S counted twice."""
@@ -222,7 +279,7 @@ def traverse_loop(start: Space) -> int:
     curr = list(start.exits)[0] # Arbitrary
     n = 1
     while curr != start:
-        curr.add_to_loop()
+        curr.in_loop = True
         _ = curr
         curr = curr.next_space(prev)
         prev = _
@@ -233,13 +290,14 @@ def traverse_loop(start: Space) -> int:
 def count_enclosed() -> int:
     n = 0
     rows = 0
-    for row in grid:
+    for row in app.grid:
+        print()
         for space in row:
             n += space.is_enclosed_in_main_loop()
         
-        rows += 1
-        if rows > 2:
-            break
+        # rows += 1
+        # if rows > 2:
+        #     break
     return n
 
 def print_enclosure(_grid: list[list[Space]]) -> None:
@@ -257,42 +315,51 @@ def print_enclosure(_grid: list[list[Space]]) -> None:
                 cprint(' ', 'dark_grey', 'on_dark_grey', end='')
         print()
 
-        rows += 1
-        if rows > 2:
-            break
+        # rows += 1
+        # if rows > 2:
+        #     break
 
 # Logic
 
+app = App()
 result = 0
-grid: list[list[Space]] = []
 start_exits: set[Space] = set()
+start: Space
 
 with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     for (y, line) in enumerate(stripped_lines(f)):
         row = []
         for (x, c) in enumerate(line):
             row.append(Space(c, x, y))
-        grid.append(row)
+        app.grid.append(row)
 
     start = None
-    for line in grid:
+    for line in app.grid:
         for space in line:
             if space.symbol == 'S':
                 start = space
+                start.in_loop = True
             else:
                 space.add_exits()
     
     start.exits = start_exits
     traverse_loop(start) # Required to update in_loop
-    old_grid = list(row[:] for row in grid)
-    expand_grid()
+    app.original_grid = [row[:] for row in app.grid]
+    app.grid = expand_grid()
+
+    for line in app.grid:
+        print(''.join((str(s) for s in line)))
+
+    # print()
+    # for line in app.grid:
+    #     print(''.join((str(s) for s in line)))
 
     result = count_enclosed()
     print(result)
 
-    print_enclosure(old_grid)
+    print_enclosure(app.original_grid)
     print()
-    print_enclosure(grid)
+    print_enclosure(app.grid)
     
 with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
     f.write(f'{result}')
