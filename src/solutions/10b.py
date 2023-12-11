@@ -15,7 +15,7 @@ S = fname[2]
 
 # Mode
 
-TESTING = True
+TESTING = False
 INPUTS = 'inputs' if not TESTING else 'test_inputs'
 OUTPUTS = 'outputs' if not TESTING else 'test_outputs'
 
@@ -134,17 +134,21 @@ class Space:
 
     def search_path_to_exit(self: Space) -> bool:
         if not self.searched_path_to_exit:
-            print(f'searching exit for {repr(self)}')
+            # print(f'searching exit for {repr(self)}')
 
             self.has_path_to_exit = self._search_path_to_exit()
             self.searched_path_to_exit = True
 
             if self.has_path_to_exit:
-                app.known_edges.add(self)
+                for space in app.current_path:
+                    space.has_path_to_exit = True
+                    space.searched_path_to_exit = True
+                    app.known_edges.add(space)
+                    app.current_path = set()
             else:
                 app.known_blocks.add(self)
             
-            print()
+            # print()
         
         return self.has_path_to_exit
     
@@ -160,18 +164,18 @@ class Space:
         
         # Can our surrounding ones lead to exits? 
         app.current_path.add(self)
-        app.current_path_.append(self)
+        # app.current_path_.append(self)
         eligible = self.surrounding()
         
-        print('  eligible')
-        for s in eligible:
-            print(f'    {s.id}/{s.symbol}/[{s.y}][{s.x}]', end=' ')
-        print()
+        # print('  eligible')
+        # for s in eligible:
+        #     print(f'    {s.id}/{s.symbol}/[{s.y}][{s.x}]', end=' ')
+        # print()
 
-        print('  already seen')
-        for s in app.current_path_:
-            print(f'    {s.id}/{s.symbol}/[{s.y}][{s.x}]', end=' ')
-        print()
+        # print('  already seen')
+        # for s in app.current_path_:
+        #     print(f'    {s.id}/{s.symbol}/[{s.y}][{s.x}]', end=' ')
+        # print()
         
 
         if eligible.intersection(app.known_edges):
@@ -180,7 +184,7 @@ class Space:
         if any(adj.search_path_to_exit() for adj in eligible):
             return True
         
-        print(f'{repr(self)} no good, no good')
+        # print(f'{repr(self)} no good, no good')
                     
         # No way out
         return False
@@ -188,13 +192,13 @@ class Space:
     def is_enclosed_in_main_loop(self: Space) -> bool:
         if not self.checked_enclosure:
             app.current_path = set()
-            app.current_path_ = []
+            # app.current_path_ = []
             self.is_enclosed = self._is_enclosed_in_main_loop()
             self.checked_enclosure = True
         
-        if self.is_enclosed:
+        # if self.is_enclosed:
             
-            print('enclosed', repr(self))
+        #     print('enclosed', repr(self))
         return self.is_enclosed
 
     def _is_enclosed_in_main_loop(self: Space) -> bool:
@@ -375,9 +379,9 @@ with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     result = count_enclosed()
     print(result)
 
-    # print_enclosure(app.original_grid)
-    # print()
-    # print_enclosure(app.grid)
+    print_enclosure(app.original_grid)
+    print()
+    print_enclosure(app.grid)
     
 with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
     f.write(f'{result}')
