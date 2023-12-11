@@ -5,6 +5,7 @@
 from __future__ import annotations
 from typing import Iterable
 from termcolor import cprint
+import sys
 
 # My naming convention...
 
@@ -131,10 +132,9 @@ class Space:
             self.x == (len(app.grid[0]) - 1),
             self.y == (len(app.grid) - 1)
         ))
-
+    
     def search_path_to_exit(self: Space) -> bool:
         if not self.searched_path_to_exit:
-            # print(f'searching exit for {repr(self)}')
 
             self.has_path_to_exit = self._search_path_to_exit()
             self.searched_path_to_exit = True
@@ -164,27 +164,16 @@ class Space:
         
         # Can our surrounding ones lead to exits? 
         app.current_path.add(self)
-        # app.current_path_.append(self)
         eligible = self.surrounding()
-        
-        # print('  eligible')
-        # for s in eligible:
-        #     print(f'    {s.id}/{s.symbol}/[{s.y}][{s.x}]', end=' ')
-        # print()
-
-        # print('  already seen')
-        # for s in app.current_path_:
-        #     print(f'    {s.id}/{s.symbol}/[{s.y}][{s.x}]', end=' ')
-        # print()
-        
 
         if eligible.intersection(app.known_edges):
             return True
         
-        if any(adj.search_path_to_exit() for adj in eligible):
-            return True
-        
-        # print(f'{repr(self)} no good, no good')
+        for adj in eligible:
+            if adj.searched_path_to_exit and adj.has_path_to_exit:
+                return True
+            elif adj.search_path_to_exit():
+                return True
                     
         # No way out
         return False
@@ -192,13 +181,9 @@ class Space:
     def is_enclosed_in_main_loop(self: Space) -> bool:
         if not self.checked_enclosure:
             app.current_path = set()
-            # app.current_path_ = []
             self.is_enclosed = self._is_enclosed_in_main_loop()
             self.checked_enclosure = True
         
-        # if self.is_enclosed:
-            
-        #     print('enclosed', repr(self))
         return self.is_enclosed
 
     def _is_enclosed_in_main_loop(self: Space) -> bool:
@@ -310,21 +295,12 @@ def traverse_loop(start: Space) -> int:
 
 def count_enclosed() -> int:
     n = 0
-    rows = 0
     for row in app.grid:
         for space in row:
             n += space.is_enclosed_in_main_loop()
-        
-        # rows += 1
-        # if rows > 2:
-        #     break
     return n
 
 def print_enclosure(_grid: list[list[Space]]) -> None:
-    rows = 0
-
-
-
     for line in _grid:
         for cell in line:
             if cell.is_enclosed_in_main_loop():
@@ -337,16 +313,13 @@ def print_enclosure(_grid: list[list[Space]]) -> None:
                 cprint(' ', 'dark_grey', 'on_dark_grey', end='')
         print()
 
-        # rows += 1
-        # if rows > 2:
-        #     break
-
 # Logic
 
 app = App()
 result = 0
 start_exits: set[Space] = set()
 start: Space
+sys.setrecursionlimit(10_000)
 
 with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     for (y, line) in enumerate(stripped_lines(f)):
@@ -369,19 +342,12 @@ with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     app.original_grid = [row[:] for row in app.grid]
     app.grid = expand_grid()
 
-    # for line in app.grid:
-    #     print(''.join((str(s) for s in line)))
-
-    # print()
-    # for line in app.grid:
-    #     print(''.join((str(s) for s in line)))
-
     result = count_enclosed()
-    print(result)
+    # print(result)
 
-    print_enclosure(app.original_grid)
-    print()
-    print_enclosure(app.grid)
+    # print_enclosure(app.original_grid)
+    # print()
+    # print_enclosure(app.grid)
     
 with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
     f.write(f'{result}')
