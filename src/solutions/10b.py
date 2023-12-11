@@ -47,10 +47,16 @@ DIRECTION_TO_SYMBOLS = {
 class App:
     grid: list[list[Space]]
     original_grid: list[list[Space]]
+    current_path: set[Space]
+    known_edges: set[Space]
+    known_blocks: set[Space]
 
     def __init__(self: App) -> None:
         self.grid = []
         self.original_grid = []
+        self.current_path = set()
+        self.known_edges = set()
+        self.known_blocks = set()
 
 class Space:
     next_id: int=0
@@ -98,26 +104,23 @@ class Space:
                     if other.symbol == 'S':
                         start_exits.add(self)
 
+    def next_exit(self: Space, prev: Space) -> Space:
+        for space in self.exits:
+            if space != prev:
+                return space
+
     def space_from(self: Space, dx: int, dy: int) -> Space|None:
         nx, ny = self.x + dx, self.y + dy
         if (-1 < nx < len(app.grid[0])) and (-1 < ny < len(app.grid)):
             return app.grid[ny][nx]
 
-    def next_space(self: Space, prev: Space) -> Space:
-        for space in self.exits:
-            if space != prev:
-                return space
-
-    def surrounding(self: Space, exclusions: set[Space]=set()) -> set[Space]:
+    def surrounding(self: Space) -> set[Space]:
         surr = set()
         for (dx, dy) in ((-1, 0), (0, -1), (1, 0), (0, 1)):
             other = self.space_from(dx, dy)
-            pass # print(f'        considering surrounding:{repr(other)} ({other.y}, {other.x})')
 
-            if (other is not None) and (other not in exclusions):
+            if (other is not None) and (other not in app.current_path) and (other not in app.known_blocks):
                 surr.add(other)
-            elif other in exclusions:
-                print('         ineligible')
         
         return surr
     
@@ -129,20 +132,23 @@ class Space:
             self.y == (len(app.grid) - 1)
         ))
 
-    def search_path_to_exit(self: Space, exclusions: set[Space]=set()) -> bool:
-        pass # print(f'\n    searching for exit from {repr(self)}')
+    def search_path_to_exit(self: Space) -> bool:
         if not self.searched_path_to_exit:
-            self.has_path_to_exit = self._search_path_to_exit(exclusions)
+            print(f'searching exit for {repr(self)}')
+
+            self.has_path_to_exit = self._search_path_to_exit()
             self.searched_path_to_exit = True
-        
-        if self.has_path_to_exit:            
-            pass # print(f'                    {self.id} has path to exit')
-        else:
+
+            if self.has_path_to_exit:
+                app.known_edges.add(self)
+            else:
+                app.known_blocks.add(self)
             
-            pass # print(f'                    {self.id} has no path to exit')
+            print()
+        
         return self.has_path_to_exit
     
-    def _search_path_to_exit(self: Space, exclusions: set[Space]=set()) -> bool:
+    def _search_path_to_exit(self: Space) -> bool:
         
         # Loop can't be an exit
         if self.in_loop:
@@ -152,47 +158,58 @@ class Space:
         if self.on_edge():
             return True
         
-        # Can our surrounding ones lead to exits?
-        exclusions = exclusions.union({self})
-
-        # if any(adjacent.search_path_to_exit(exclusions) for adjacent in self.surrounding(exclusions)):
-        #     return True
+        # Can our surrounding ones lead to exits? 
+        app.current_path.add(self)
+        app.current_path_.append(self)
+        eligible = self.surrounding()
         
-        eligible = self.surrounding(exclusions)
-        for adjacent in eligible:
-            if adjacent.search_path_to_exit(exclusions):
-                pass # print(f'        {adjacent.id} is good')
-                return True
+        print('  eligible')
+        for s in eligible:
+            print(f'    {s.id}/{s.symbol}/[{s.y}][{s.x}]', end=' ')
+        print()
+
+        print('  already seen')
+        for s in app.current_path_:
+            print(f'    {s.id}/{s.symbol}/[{s.y}][{s.x}]', end=' ')
+        print()
+        
+
+        if eligible.intersection(app.known_edges):
+            return True
+        
+        if any(adj.search_path_to_exit() for adj in eligible):
+            return True
+        
+        print(f'{repr(self)} no good, no good')
                     
         # No way out
         return False
     
     def is_enclosed_in_main_loop(self: Space) -> bool:
         if not self.checked_enclosure:
+            app.current_path = set()
+            app.current_path_ = []
             self.is_enclosed = self._is_enclosed_in_main_loop()
             self.checked_enclosure = True
         
         if self.is_enclosed:
-            pass # print(f'      {self.id} is enclosed!!')
+            
+            print('enclosed', repr(self))
         return self.is_enclosed
 
     def _is_enclosed_in_main_loop(self: Space) -> bool:
         if self.expanded_only:
             return False
         
-        pass # print(f'checking enclosure for {repr(self)}', end='... ')
         if self.in_loop:
-            print('in loop')
             return False
         
         if self.on_edge():
-            print('on edge')
             return False
 
         if self.search_path_to_exit():
             return False
         
-        print('enclosed')
         return True
     
     def connected(self: Space, other: Space) -> bool:
@@ -281,7 +298,7 @@ def traverse_loop(start: Space) -> int:
     while curr != start:
         curr.in_loop = True
         _ = curr
-        curr = curr.next_space(prev)
+        curr = curr.next_exit(prev)
         prev = _
         n += 1
     
@@ -291,7 +308,6 @@ def count_enclosed() -> int:
     n = 0
     rows = 0
     for row in app.grid:
-        print()
         for space in row:
             n += space.is_enclosed_in_main_loop()
         
@@ -302,6 +318,8 @@ def count_enclosed() -> int:
 
 def print_enclosure(_grid: list[list[Space]]) -> None:
     rows = 0
+
+
 
     for line in _grid:
         for cell in line:
@@ -347,8 +365,8 @@ with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     app.original_grid = [row[:] for row in app.grid]
     app.grid = expand_grid()
 
-    for line in app.grid:
-        print(''.join((str(s) for s in line)))
+    # for line in app.grid:
+    #     print(''.join((str(s) for s in line)))
 
     # print()
     # for line in app.grid:
@@ -357,9 +375,9 @@ with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     result = count_enclosed()
     print(result)
 
-    print_enclosure(app.original_grid)
-    print()
-    print_enclosure(app.grid)
+    # print_enclosure(app.original_grid)
+    # print()
+    # print_enclosure(app.grid)
     
 with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
     f.write(f'{result}')
