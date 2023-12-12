@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 from typing import Iterable
-from termcolor import cprint
+import itertools
 
 # My naming convention...
 
@@ -15,7 +15,7 @@ S = fname[2]
 
 # Mode
 
-TESTING = True
+TESTING = False
 INPUTS = 'inputs' if not TESTING else 'test_inputs'
 OUTPUTS = 'outputs' if not TESTING else 'test_outputs'
 
@@ -27,63 +27,6 @@ def stripped_lines(f) -> Iterable[str]:
 # Constants
 
 # Helpers
-
-# class Space:
-#     next_id: int=0
-#     id: int
-#     symbol: str
-#     x: int
-#     y: int
-
-#     def __init__(self: Space, symbol: str, x: int, y: int) -> None:
-#         self.id = Space.next_id
-#         Space.next_id += 1
-
-#         self.symbol = symbol
-#         self.x, self.y = x, y
-#         self.exits = set()
-
-#     def space_from(self: Space, dx: int, dy: int) -> Space|None:
-#         nx, ny = self.x + dx, self.y + dy
-#         if (-1 < nx < len(app.grid[0])) and (-1 < ny < len(app.grid)):
-#             return app.grid[ny][nx]
-
-#     def surrounding(self: Space) -> set[Space]:
-#         surr = set()
-#         for (dx, dy) in ((-1, 0), (0, -1), (1, 0), (0, 1)):
-#             other = self.space_from(dx, dy)
-
-#             if (other is not None):
-#                 surr.add(other)
-        
-#         return surr
-    
-#     def is_galaxy(self: Space) -> bool:
-#         return self.symbol == '#'
-
-#     def on_edge(self: Space) -> bool:
-#         return any((
-#             self.x == 0,
-#             self.y == 0,
-#             self.x == (len(app.grid[0]) - 1),
-#             self.y == (len(app.grid) - 1)
-#         ))
-    
-#     def __hash__(self: Space) -> int:
-#         return hash(self.id)
-            
-#     def __eq__ (self: Space, other: object) -> bool:
-#         if not isinstance(other, Space):
-#             return False
-        
-#         return self.id == other.id
-    
-#     def __str__(self: Space) -> str:
-#         return self.symbol
-    
-#     def __repr__(self: Space) -> str:
-#         s = f'{self.id:>3}: {self.symbol} ([{self.y}][{self.x}])'
-#         return s
 
 def expand_grid() -> None:
 
@@ -130,6 +73,35 @@ def find_expandables() -> None:
         if not any(c == '#' for c in row):
             expand_cols.add(i)
 
+def shortest_pair_path(one: tuple[int], other: tuple[int]) -> int:
+    n = 0
+    sx, sy = one
+    tx, ty = other
+
+    # print('starting galaxy pair')
+    # print(f'[{sy}][{ty}] [{sx}][{tx}]')
+    # print()
+
+    while sx != tx:
+        sx += (tx - sx) // abs(tx - sx)
+        n += 1
+
+    #     print(f'{n:>2} : [{sy}][{ty}] [{sx}][{tx}]')
+
+    # print()
+
+    while sy != ty:
+        sy += (ty - sy) // abs(ty - sy)
+        n += 1
+
+    #     print(f'{n:>2} : [{sy}][{ty}] [{sx}][{tx}]')
+
+    # print()
+    # print('done galaxy pair')
+    # print()
+
+    return n
+
 # Logic
 
 grid: list[str] = []
@@ -139,14 +111,20 @@ expand_cols = set()
 result: int = 0
 
 with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
-    for (i_row, line) in enumerate(stripped_lines(f)):
+    for line in stripped_lines(f):
         grid.append(line)
-        for (i_col, cell) in enumerate(line):
-            if cell == '#':
-                galaxies.add((i_row, i_col))
                 
     find_expandables()
     expand_grid()
+
+    # Must be done post-expansion!
+    for (i_row, row) in enumerate(grid):
+        for (i_col, col) in enumerate(row):
+            if col == '#':
+                galaxies.add((i_row, i_col))
+
+    for pair in itertools.combinations(galaxies, 2):
+        result += shortest_pair_path(*pair)
     
 with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
     f.write(f'{result}')
