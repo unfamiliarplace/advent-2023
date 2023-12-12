@@ -1,4 +1,4 @@
-# https://adventofcode.com/2023/day/00
+# https://adventofcode.com/2023/day/10
 
 # Regular imports
 
