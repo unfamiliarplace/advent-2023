@@ -51,35 +51,19 @@ def shortest_pair_path(one: tuple[int], other: tuple[int]) -> int:
     sy, sx = one
     ty, tx = other
 
-    # print('starting galaxy pair')
-    # print(f'[{sy}][{sx}] [{ty}][{tx}]')
-    # print()
-
     while sx != tx:
         sx += (tx - sx) // abs(tx - sx)
         n += 1
 
         if sx in expand_cols:
-            # print('crosses horizontal expansion')
             n += (EXPANSION - 1)
-
-    #     print(f'{n:>2} : [{sy}][{sx}] [{ty}][{tx}]')
-
-    # print()
 
     while sy != ty:
         sy += (ty - sy) // abs(ty - sy)
         n += 1
 
         if sy in expand_rows:
-            # print('crosses vertical expansion')
             n += (EXPANSION - 1)
-
-    #     print(f'{n:>2} : [{sy}][{sx}] [{ty}][{tx}]')
-
-    # print()
-    # print('done galaxy pair')
-    # print()
 
     return n
 
@@ -101,12 +85,6 @@ with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
         for (i_col, col) in enumerate(row):
             if col == '#':
                 galaxies.add((i_row, i_col))
-
-    # for line in grid:
-    #     print(line)
-
-    # for (row, col) in galaxies:
-    #     print(f'[{row}][{col}]')
 
     for pair in itertools.combinations(galaxies, 2):
         result += shortest_pair_path(*pair)
