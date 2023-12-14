@@ -98,6 +98,13 @@ def get_placements(s: str, n: int) -> list[str]:
 
     return placements
 
+# TODO
+# I suspect it being too high has to do with duplicate
+# endpoints for the same starting point... not sure.
+# Can't just use set the way I was doing because it
+# eliminates same answers. Can I somehow both keep track
+# of what's been done so far and also truncate?
+
 
 def count_arrangements(slots: str, runs: list[int]) -> int:
     arrangements = [0]
