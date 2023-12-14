@@ -88,6 +88,8 @@ def get_placements(offset: int, s: str, n: int) -> list[tuple[int, str]]:
             if i > 0:
                 if p[i - 1] == '#':
                     continue
+                else:
+                    p[i - 1] = '.'
             
             if (i + n) < len(s):
                 if p[i + n] == '#':
@@ -105,7 +107,9 @@ def count_arrangements(slots: str, runs: list[int]) -> tuple[set[str], int]:
 
     def _make_arrangements(offset: int, _slots: str, _runs: list[int]) -> None:
         if not _runs:
-            arrangements.add(_slots)
+            # Must have used all '#'
+            if '#' not in _slots:
+                arrangements.add(_slots)
         else:
             placements = get_placements(offset, _slots, _runs[0])
             rest = _runs[1:]
@@ -120,9 +124,6 @@ def count_arrangements(slots: str, runs: list[int]) -> tuple[set[str], int]:
     return arrangements, len(arrangements)
 
 # Logic
-
-# TODO This is wrong (from dataset)
-# 4 | #?????.???# 4,1,2
 
 result = 0
 
