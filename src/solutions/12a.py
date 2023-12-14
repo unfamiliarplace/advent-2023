@@ -30,6 +30,13 @@ def stripped_lines(f) -> Iterable[str]:
 # Helpers
 
 def max_discrete_blocks(offset: int, s: str) -> int:
+    """
+    Return the maximum number of discrete blocks that could be formed
+    in the given string starting at the given offset.
+
+    '?' and '#' can be part of a block
+    '?' and '.' can separate blocks
+    """
     can_start = False
     n = 0
 
@@ -39,19 +46,23 @@ def max_discrete_blocks(offset: int, s: str) -> int:
                 n += 1
                 can_start = False
         else:
-            if c in '?.':
+            if c in '.?':
                 can_start = True
     
     return n
             
 
 def get_start_and_end(s: str, n: int) -> tuple[int]|None:
-    """For short-circuiting."""
-    start = None
-    end = None
+    """
+    For short-circuiting. Find the first and last positions
+    where it would make sense to start searching.
+    """
 
-    s = s[:-(n-1)] if n > 1 else s # overall possible chunk
+    # Reduce the scope to the last place that has a chunk large enough
+    # to hold a block of size n
+    s = s[:-(n-1)] if n > 1 else s
 
+    # Start = first instance of '#' or '?'
     for i in range(len(s)):
         if s[i] in {'#', '?'}:
             start = i
@@ -59,6 +70,7 @@ def get_start_and_end(s: str, n: int) -> tuple[int]|None:
     else:
         return None, None
     
+    # End = last instance of '#' or '?'
     for i in range(len(s), 0, -1):
         if s[i - 1] in {'#', '?'}:
             end = i
@@ -68,22 +80,31 @@ def get_start_and_end(s: str, n: int) -> tuple[int]|None:
     
     return start, end
 
-def get_placements(offset: int, s: str, n: int) -> list[tuple[int, str]]:
+def get_placements(offset: int, s: str, n: int) -> Iterable[tuple[int, str]]:
+    """
+    Given a string of slots, a block of size n, and an offset to start looking,
+    yield tuples of the form (i, placed) where placed is a valid placement
+    of the block in s and i is the new offset following said block.
+    """
 
-    # short-circuiting
+    # Narrow the scope
     start, end = get_start_and_end(s[offset:], n)
     if start == None:
-        return []
+        return
     
+    # Correct offset (above function only considered s[offset:])
     start, end = start + offset, end + offset
-    
-    placements = []
 
+    # Check each valid chunk start location
     for i in range(start, end):
 
-        block = s[i:i + n]
-        if '.' not in block:
+        chunk = s[i:i + n]
+        if '.' not in chunk:
             p = list(s)
+
+            # Ensure this chunk wasn't preceded or followed by '#',
+            # which would make it longer than intended.
+            # If valid, force a separation from the following block.
 
             if i > 0:
                 if p[i - 1] == '#':
@@ -97,18 +118,27 @@ def get_placements(offset: int, s: str, n: int) -> list[tuple[int, str]]:
                 else:
                     p[i + n] = '.'
 
+            # Place chunk (eliminating future uses of it) and yield
             p = ''.join(p[:i] + ['X' * n] + p[i+n:])
-            placements.append((i + n, p))
+            yield (i + n, p)
 
-    return placements
+            # Short-circuit
+            # If the block was entirely '#' it was the only possible placement
+            if chunk == ('#' * 9):
+                break
 
 def count_arrangements(slots: str, runs: list[int]) -> tuple[set[str], int]:
+    """
+    Return the number of possible arrangements.
+    """
     arrangements = set()
+    n_arrangements = [0]
 
     def _make_arrangements(offset: int, _slots: str, _runs: list[int]) -> None:
         if not _runs:
             # Must have used all '#'
             if '#' not in _slots:
+                n_arrangements[0] += 1
                 arrangements.add(_slots.replace('X', '#').replace('?', '.'))
         else:
             placements = get_placements(offset, _slots, _runs[0])
@@ -121,7 +151,7 @@ def count_arrangements(slots: str, runs: list[int]) -> tuple[set[str], int]:
                 _make_arrangements(o, p, rest)
 
     _make_arrangements(0, slots, runs)
-    return arrangements, len(arrangements)
+    return arrangements, n_arrangements[0]
 
 # Bruteforce version
 
@@ -152,6 +182,7 @@ def bf_count_arrangements(slots: str, runs: list[int]) -> tuple[set[str], int]:
             good.add(v)
 
     return good, len(good)
+
 # Logic
 
 result = 0
