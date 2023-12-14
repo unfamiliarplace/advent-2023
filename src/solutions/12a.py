@@ -14,7 +14,7 @@ S = fname[2]
 
 # Mode
 
-TESTING = False
+TESTING = True
 INPUTS = 'inputs' if not TESTING else 'test_inputs'
 OUTPUTS = 'outputs' if not TESTING else 'test_outputs'
 
@@ -29,36 +29,48 @@ def stripped_lines(f) -> Iterable[str]:
 
 # Helpers
 
-def try_arrangement(slots: str, runs: list[int]) -> int:
-    def _placements(_s: str, _b: str) -> list[str]:
-        L = []
-        for i in range(len(_s)):
-            _p = _s[i:i+len(_b)]
-            if (len(_p) == len(_b)) and (set(_p) == {'?', '#'}):
+def get_placements(s: str, n: int) -> list[str]:
+    placements = []
 
-                if ((i > 0) and (_s[i-1] == '#')) or (i < (len(_b) - 1) and (_s[i+1] == '#')):
+    for i in range(len(s) + 1 - n):
+
+        block = s[i:i + n]
+        if '.' not in block and '?' in block:
+            arr = list(s)
+
+            if i > 0:
+                if arr[i - 1] == '#':
                     continue
+                else:
+                    arr[i - 1] = '.'
+            
+            if (i + n) < len(s):
+                if arr[i + n] == '#':
+                    continue
+                else:
+                    arr[i + n] = '.'
 
-                arr = _b[:i] + ('#' * len(_b)) + slots[i+len(_b):]
-                L.append(arr)
-        return L
+            arr = arr[:i] + ['#' * n] + arr[i+n:]
+            placements.append(''.join(arr))
 
-    for run in sorted(runs, reverse=True):
-        block = '#' * run
-        ps = _placements(slots, block)
-        print(run, block, ps)
-        break
-'''
-??#??????#..????? [9, 2, 1]
-##########..?????
-'''
-
+    return placements
 
 
-def count_arrangements(slots: str, runs: list[int]) -> int:
-    print(slots, runs)
-    try_arrangement(slots, runs)
-    return 1
+def find_arrangements(slots: str, runs: list[int]) -> int:
+    arrangements = set()
+
+    def _make_arrangements(_slots: str, rest: list[int]) -> None:
+        if not rest:
+            arrangements.add(_slots.replace('?', '.'))
+        else:
+            for placed_slots in get_placements(_slots, rest[0]):
+
+                # short-circuit
+                if '?' in placed_slots:
+                    _make_arrangements(placed_slots, rest[1:])
+
+    _make_arrangements(slots, sorted(runs, reverse=True))
+    return arrangements, len(arrangements)
 
 # Logic
 
@@ -68,7 +80,12 @@ with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     for line in stripped_lines(f):
         slots, runs = line.split()
         runs = [int(r) for r in runs.split(',')]
-        result += count_arrangements(slots, runs)
+        arrangements, n_arrangements = find_arrangements(slots, runs)
+        print(line)
+        print(arrangements, n_arrangements)
+        print()
+
+        result += n_arrangements
         break
 
 with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
