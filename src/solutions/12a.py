@@ -127,35 +127,44 @@ def get_placements(offset: int, s: str, n: int) -> Iterable[tuple[int, str]]:
             if chunk == ('#' * 9):
                 break
 
-def count_arrangements(slots: str, runs: list[int]) -> tuple[set[str], int]:
+def count_arrangements(slots: str, runs: list[int]) -> int:
     """
-    Return the number of possible arrangements.
+    Return the number of possible arrangements for the given slots and runs.
+    Uses an efficient algorithm.
     """
-    arrangements = set()
     n_arrangements = [0]
 
     def _make_arrangements(offset: int, _slots: str, _runs: list[int]) -> None:
+
+        # Base case: no more runs to check
         if not _runs:
             # Must have used all '#'
             if '#' not in _slots:
                 n_arrangements[0] += 1
-                arrangements.add(_slots.replace('X', '#').replace('?', '.'))
+
         else:
+            # Get all possible placements of the next run
             placements = get_placements(offset, _slots, _runs[0])
             rest = _runs[1:]
             
+            # Filter: enough possible blocks left for remaining runs?
             placements = filter(lambda p: max_discrete_blocks(*p) >= len(rest), placements)
-            placements = list(placements) # debugging
 
-            for (o, p) in placements:
-                _make_arrangements(o, p, rest)
+            # Try each placement with remaining runs
+            for (updated_offset, p) in placements:
+                _make_arrangements(updated_offset, p, rest)
 
     _make_arrangements(0, slots, runs)
-    return arrangements, n_arrangements[0]
+    return n_arrangements[0]
 
 # Bruteforce version
 
 def get_all_variants(slots: str) -> Iterable[str]:
+    """
+    Yield all possible variants for the given string of slots.
+    The number of variants is 2**n where n is the number of '?'
+    """
+
     if '?' not in slots:
         yield slots
     else:
@@ -165,6 +174,9 @@ def get_all_variants(slots: str) -> Iterable[str]:
             yield slots[:i] + '#' + v
 
 def is_valid(variant: str, runs: list[int]) -> bool:
+    """
+    Return True iff the given variant matches the given list of runs.
+    """
     groups = list(filter(None, variant.split('.')))
     if len(groups) != len(runs):
         return False
@@ -172,16 +184,22 @@ def is_valid(variant: str, runs: list[int]) -> bool:
     for (i, group) in enumerate(groups):
         if len(group) != runs[i]:
             return False
+        
     return True
 
-def bf_count_arrangements(slots: str, runs: list[int]) -> tuple[set[str], int]:
-    good = set()
+def bf_count_arrangements(slots: str, runs: list[int]) -> int:
+    """
+    Return the number of possible arrangements for the given slots and runs.
+    Uses an inefficient algorithm: creates every possible variant and tallies
+    the valid ones.
+    """
+    n = 0
 
     for v in get_all_variants(slots):
         if is_valid(v, runs):
-            good.add(v)
+            n += 1
 
-    return good, len(good)
+    return n
 
 # Logic
 
@@ -191,21 +209,7 @@ with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     for line in stripped_lines(f):
         slots, runs = line.split()
         runs = [int(r) for r in runs.split(',')]
-
-        smart, n_smart = count_arrangements(slots, runs)
-        # bf, n_bf = bf_count_arrangements(slots, runs)
-
-        # if n_smart != n_bf:
-        #     print(line)
-        #     print(f'{n_smart} smart vs. {n_bf} bf')
-        #     print(f'Missing from n_smart: {bf.difference(smart)}')
-        #     print()
-
-        # arrangements, n_arrangements = count_arrangements(slots, runs)
-        # print(f'{n_arrangements:>3} | {line}')
-        # print()
-
-        result += n_smart
+        result += count_arrangements(slots, runs)
 
 with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
     f.write(f'{result}')
