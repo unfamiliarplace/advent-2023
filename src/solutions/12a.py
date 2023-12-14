@@ -29,11 +29,11 @@ def stripped_lines(f) -> Iterable[str]:
 
 # Helpers
 
-def max_discrete_blocks(s: str) -> int:
+def max_discrete_blocks(offset: int, s: str) -> int:
     can_start = False
     n = 0
 
-    for c in s:
+    for c in s[offset:]:
         if can_start:
             if c in '#?':
                 n += 1
@@ -68,12 +68,14 @@ def get_start_and_end(s: str, n: int) -> tuple[int]|None:
     
     return start, end
 
-def get_placements(s: str, n: int) -> list[str]:
+def get_placements(offset: int, s: str, n: int) -> list[tuple[int, str]]:
 
     # short-circuiting
-    start, end = get_start_and_end(s, n)
+    start, end = get_start_and_end(s[offset:], n)
     if start == None:
         return []
+    
+    start, end = start + offset, end + offset
     
     placements = []
 
@@ -93,37 +95,29 @@ def get_placements(s: str, n: int) -> list[str]:
                 else:
                     p[i + n] = '.'
 
-            p = ''.join(p[i+n:])
-            placements.append(p)
+            p = ''.join(p[:i] + ['X' * n] + p[i+n:])
+            placements.append((i + n, p))
 
     return placements
 
-# TODO
-# I suspect it being too high has to do with duplicate
-# endpoints for the same starting point... not sure.
-# Can't just use set the way I was doing because it
-# eliminates same answers. Can I somehow both keep track
-# of what's been done so far and also truncate?
+def count_arrangements(slots: str, runs: list[int]) -> tuple[set[str], int]:
+    arrangements = set()
 
-
-def count_arrangements(slots: str, runs: list[int]) -> int:
-    arrangements = [0]
-
-    def _make_arrangements(_slots: str, _runs: list[int]) -> None:
+    def _make_arrangements(offset: int, _slots: str, _runs: list[int]) -> None:
         if not _runs:
-            arrangements[0] += 1
+            arrangements.add(_slots)
         else:
-            placements = get_placements(_slots, _runs[0])
+            placements = get_placements(offset, _slots, _runs[0])
             rest = _runs[1:]
             
-            placements = filter(lambda p: max_discrete_blocks(p) >= len(rest), placements)
+            placements = filter(lambda p: max_discrete_blocks(*p) >= len(rest), placements)
             placements = list(placements) # debugging
 
-            for p in placements:
-                _make_arrangements(p, rest)
+            for (o, p) in placements:
+                _make_arrangements(o, p, rest)
 
-    _make_arrangements(slots, runs)
-    return arrangements[0]
+    _make_arrangements(0, slots, runs)
+    return arrangements, len(arrangements)
 
 # Logic
 
@@ -133,7 +127,7 @@ with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     for line in stripped_lines(f):
         slots, runs = line.split()
         runs = [int(r) for r in runs.split(',')]
-        n_arrangements = count_arrangements(slots, runs)
+        arrangements, n_arrangements = count_arrangements(slots, runs)
         # print(f'{n_arrangements:>3} | {line}')
         # print()
 
