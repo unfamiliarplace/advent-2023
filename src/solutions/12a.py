@@ -53,7 +53,7 @@ def get_start_and_end(s: str, n: int) -> tuple[int]|None:
     s = s[:-(n-1)] if n > 1 else s # overall possible chunk
 
     for i in range(len(s)):
-        if slots[i] in {'#', '?'}:
+        if s[i] in {'#', '?'}:
             start = i
             break
     else:
@@ -109,7 +109,7 @@ def count_arrangements(slots: str, runs: list[int]) -> tuple[set[str], int]:
         if not _runs:
             # Must have used all '#'
             if '#' not in _slots:
-                arrangements.add(_slots)
+                arrangements.add(_slots.replace('X', '#').replace('?', '.'))
         else:
             placements = get_placements(offset, _slots, _runs[0])
             rest = _runs[1:]
@@ -144,9 +144,14 @@ def is_valid(variant: str, runs: list[int]) -> bool:
             return False
     return True
 
-def bf_count_arrangements(slots: str, runs: list[int]) -> int:
-    return sum(is_valid(v, runs) for v in get_all_variants(slots))
+def bf_count_arrangements(slots: str, runs: list[int]) -> tuple[set[str], int]:
+    good = set()
 
+    for v in get_all_variants(slots):
+        if is_valid(v, runs):
+            good.add(v)
+
+    return good, len(good)
 # Logic
 
 result = 0
@@ -156,13 +161,20 @@ with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
         slots, runs = line.split()
         runs = [int(r) for r in runs.split(',')]
 
-        n_arrangements = bf_count_arrangements(slots, runs)
+        smart, n_smart = count_arrangements(slots, runs)
+        # bf, n_bf = bf_count_arrangements(slots, runs)
+
+        # if n_smart != n_bf:
+        #     print(line)
+        #     print(f'{n_smart} smart vs. {n_bf} bf')
+        #     print(f'Missing from n_smart: {bf.difference(smart)}')
+        #     print()
 
         # arrangements, n_arrangements = count_arrangements(slots, runs)
         # print(f'{n_arrangements:>3} | {line}')
         # print()
 
-        result += n_arrangements
+        result += n_smart
 
 with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
     f.write(f'{result}')
