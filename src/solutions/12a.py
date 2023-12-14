@@ -121,6 +121,9 @@ def count_arrangements(slots: str, runs: list[int]) -> tuple[set[str], int]:
 
 # Logic
 
+# TODO This is wrong (from dataset)
+# 4 | #?????.???# 4,1,2
+
 result = 0
 
 with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
