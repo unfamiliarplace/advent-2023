@@ -1,5 +1,9 @@
 # https://adventofcode.com/2023/day/12
 
+"""
+This version checks runs as if they were unordered.
+"""
+
 # Regular imports
 
 from __future__ import annotations
@@ -14,7 +18,7 @@ S = fname[2]
 
 # Mode
 
-TESTING = False
+TESTING = True
 INPUTS = 'inputs' if not TESTING else 'test_inputs'
 OUTPUTS = 'outputs' if not TESTING else 'test_outputs'
 
@@ -28,22 +32,6 @@ def stripped_lines(f) -> Iterable[str]:
 
 
 # Helpers
-
-def max_discrete_blocks(s: str) -> int:
-    can_start = False
-    n = 0
-
-    for c in s:
-        if can_start:
-            if c in '#?':
-                n += 1
-                can_start = False
-        else:
-            if c in '?.':
-                can_start = True
-    
-    return n
-            
 
 def get_start_and_end(s: str, n: int) -> tuple[int]|None:
     """For short-circuiting."""
@@ -80,43 +68,42 @@ def get_placements(s: str, n: int) -> list[str]:
     for i in range(start, end):
 
         block = s[i:i + n]
-        if '.' not in block:
-            p = list(s)
+        if '.' not in block and 'X' not in block:
+            arr = list(s)
 
             if i > 0:
-                if p[i - 1] == '#':
-                    continue
-            
-            if (i + n) < len(s):
-                if p[i + n] == '#':
+                if arr[i - 1] in ('#', 'X'):
                     continue
                 else:
-                    p[i + n] = '.'
+                    arr[i - 1] = '.'
+            
+            if (i + n) < len(s):
+                if arr[i + n] in ('#', 'X'):
+                    continue
+                else:
+                    arr[i + n] = '.'
 
-            p = ''.join(p[i+n:])
-            placements.append(p)
+            arr = arr[:i] + ['X' * n] + arr[i+n:]
+            placements.append(''.join(arr))
 
     return placements
 
 
-def count_arrangements(slots: str, runs: list[int]) -> int:
-    arrangements = [0]
+def find_arrangements(slots: str, runs: list[int]) -> int:
+    arrangements = set()
 
     def _make_arrangements(_slots: str, _runs: list[int]) -> None:
         if not _runs:
-            arrangements[0] += 1
+            arrangements.add(_slots.replace('?', '.'))
         else:
             placements = get_placements(_slots, _runs[0])
             rest = _runs[1:]
             
-            placements = filter(lambda p: max_discrete_blocks(p) >= len(rest), placements)
-            placements = list(placements) # debugging
-
             for p in placements:
                 _make_arrangements(p, rest)
 
     _make_arrangements(slots, runs)
-    return arrangements[0]
+    return arrangements, len(arrangements)
 
 # Logic
 
@@ -126,9 +113,9 @@ with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     for line in stripped_lines(f):
         slots, runs = line.split()
         runs = [int(r) for r in runs.split(',')]
-        n_arrangements = count_arrangements(slots, runs)
-        # print(f'{n_arrangements:>3} | {line}')
-        # print()
+        arrangements, n_arrangements = find_arrangements(slots, runs)
+        print(line, n_arrangements)
+        print()
 
         result += n_arrangements
         # break
