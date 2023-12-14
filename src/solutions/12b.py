@@ -14,7 +14,7 @@ S = fname[2]
 
 # Mode
 
-TESTING = False
+TESTING = True
 INPUTS = 'inputs' if not TESTING else 'test_inputs'
 OUTPUTS = 'outputs' if not TESTING else 'test_outputs'
 
@@ -205,10 +205,23 @@ def bf_count_arrangements(slots: str, runs: list[int]) -> int:
 result = 0
 
 with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
+    i = 0
     for line in stripped_lines(f):
         slots, runs = line.split()
         runs = [int(r) for r in runs.split(',')]
-        result += count_arrangements(slots, runs)
+
+        # TODO Need a different approach.
+        # Fail fast will never be enough;
+        # some lines have hundreds of thousands of variations.
+
+        slots = '?'.join([slots] * 5)
+        runs *= 5
+
+        n_arrangements = count_arrangements(slots, runs)
+        result += n_arrangements
+
+        print(i, n_arrangements)
+        i += 1
 
 with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
     f.write(f'{result}')
