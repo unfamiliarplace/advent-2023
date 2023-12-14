@@ -123,6 +123,30 @@ def count_arrangements(slots: str, runs: list[int]) -> tuple[set[str], int]:
     _make_arrangements(0, slots, runs)
     return arrangements, len(arrangements)
 
+# Bruteforce version
+
+def get_all_variants(slots: str) -> Iterable[str]:
+    if '?' not in slots:
+        yield slots
+    else:
+        i = slots.find('?')
+        for v in get_all_variants(slots[i+1:]):
+            yield slots[:i] + '.' + v
+            yield slots[:i] + '#' + v
+
+def is_valid(variant: str, runs: list[int]) -> bool:
+    groups = list(filter(None, variant.split('.')))
+    if len(groups) != len(runs):
+        return False
+
+    for (i, group) in enumerate(groups):
+        if len(group) != runs[i]:
+            return False
+    return True
+
+def bf_count_arrangements(slots: str, runs: list[int]) -> int:
+    return sum(is_valid(v, runs) for v in get_all_variants(slots))
+
 # Logic
 
 result = 0
@@ -131,12 +155,14 @@ with open(f'src/{INPUTS}/{N:0>2}.txt', 'r') as f:
     for line in stripped_lines(f):
         slots, runs = line.split()
         runs = [int(r) for r in runs.split(',')]
-        arrangements, n_arrangements = count_arrangements(slots, runs)
+
+        n_arrangements = bf_count_arrangements(slots, runs)
+
+        # arrangements, n_arrangements = count_arrangements(slots, runs)
         # print(f'{n_arrangements:>3} | {line}')
         # print()
 
         result += n_arrangements
-        # break
 
 with open(f'src/{OUTPUTS}/{N:0>2}{S}.txt', 'w') as f:
     f.write(f'{result}')
